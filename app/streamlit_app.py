@@ -13,7 +13,7 @@ st.set_page_config(
     layout="wide"
 )
 
-# --- CUSTOM CSS ---
+# --- STYLE CSS ---
 st.markdown("""
 <style>
 body {
@@ -21,20 +21,17 @@ body {
     color: #FAFAFA;
 }
 
-h1, h2, h3 {
+h1 {
+    font-size: 40px;
+    font-weight: 700;
+}
+
+h2, h3 {
     font-weight: 600;
 }
 
 .block-container {
     padding-top: 2rem;
-}
-
-.metric-card {
-    background: #161B22;
-    padding: 15px;
-    border-radius: 12px;
-    text-align: center;
-    box-shadow: 0 0 10px rgba(0,0,0,0.3);
 }
 
 .section {
@@ -62,24 +59,35 @@ class LSTMModel(nn.Module):
         lstm_out, _ = self.lstm(x)
         return self.fc(lstm_out[:, -1, :])
 
+# --- LOAD MODELS ---
 @st.cache_resource
 def load_models():
     scaler = joblib.load("app/scaler.pkl")
     metrics = joblib.load("app/metrics.pkl")
 
     model = LSTMModel()
-    model.load_state_dict(torch.load("app/lstm_model.pth",
-                          map_location=torch.device('cpu')))
+    model.load_state_dict(torch.load(
+        "app/lstm_model.pth",
+        map_location=torch.device('cpu')
+    ))
     model.eval()
     return model, scaler, metrics
 
+# --- LOAD DATA (FIX BUG HTTP) ---
 @st.cache_data
 def load_data():
-    url = "https://raw.githubusercontent.com/alioubguindo/energy-consumption-forecast/main/data/AEP_hourly.csv"
-    df = pd.read_csv(url)
+    url = "https://raw.githubusercontent.com/badaraaliouguindo/energy-consumption-forecast/main/data/AEP_hourly.csv"
+
+    try:
+        df = pd.read_csv(url)
+    except Exception:
+        st.warning("Impossible de charger depuis GitHub, utilisation du fichier local")
+        df = pd.read_csv("app/AEP_hourly.csv")
+
     df['Datetime'] = pd.to_datetime(df['Datetime'])
     df = df.set_index('Datetime').sort_index()
     df_daily = df['AEP_MW'].resample('D').mean().dropna()
+
     return df_daily
 
 # --- LOAD ---
@@ -89,7 +97,6 @@ df_daily = load_data()
 # --- HEADER ---
 st.markdown("<h1>Energy Consumption Forecast</h1>", unsafe_allow_html=True)
 st.markdown("<p style='color:#8b949e;'>Prévision de la consommation électrique avec Prophet et LSTM</p>", unsafe_allow_html=True)
-
 st.markdown("<hr>", unsafe_allow_html=True)
 
 # --- METRICS ---
@@ -166,8 +173,11 @@ predictions_real = scaler.inverse_transform(
 ).flatten()
 
 last_date = df_daily.index[-1]
-future_dates = pd.date_range(start=last_date + pd.Timedelta(days=1),
-                            periods=n_days, freq='D')
+future_dates = pd.date_range(
+    start=last_date + pd.Timedelta(days=1),
+    periods=n_days,
+    freq='D'
+)
 
 fig_pred = go.Figure()
 
