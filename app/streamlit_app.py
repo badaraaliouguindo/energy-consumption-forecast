@@ -217,7 +217,4 @@ st.markdown("</div>", unsafe_allow_html=True)
 
 # --- FOOTER ---
 st.markdown("<hr>", unsafe_allow_html=True)
-st.markdown(
-    "<p style='text-align:center; color:#8b949e;'>Projet portfolio — Data Science Master | Dataset : AEP Hourly Energy Consumption</p>",
-    unsafe_allow_html=True
-)
+
